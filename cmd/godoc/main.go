@@ -27,6 +27,7 @@ import (
 	"go/build"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof" // to serve /debug/pprof/*
 	"net/url"
@@ -47,6 +48,8 @@ import (
 	"golang.org/x/tools/godoc/vfs/zipfs"
 	"golang.org/x/tools/internal/gocommand"
 	"golang.org/x/xerrors"
+
+	"github.com/coreos/go-systemd/v22/activation"
 )
 
 const defaultAddr = "localhost:6060" // default webserver address
@@ -386,7 +389,22 @@ func main() {
 	if *verbose {
 		log.Println("starting HTTP server")
 	}
-	if err := http.ListenAndServe(*httpAddr, handler); err != nil {
+	var ln net.Listener
+	if _, socketActivated := os.LookupEnv("LISTEN_FDS"); socketActivated {
+		listeners, err := activation.Listeners()
+		if len(listeners) < 1 || err != nil {
+			log.Fatalf("Socket activated, but without any listener. Err: %v", err)
+		}
+		ln = listeners[0]
+	} else {
+		listener, err := net.Listen("tcp", *httpAddr)
+		if err != nil {
+			log.Fatalf("net.Listen %s: %v", *httpAddr, err)
+		}
+		ln = listener
+	}
+	server := &http.Server{Handler: handler}
+	if err := server.Serve(ln); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("ListenAndServe %s: %v", *httpAddr, err)
 	}
 }

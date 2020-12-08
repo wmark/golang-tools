@@ -3,6 +3,7 @@ module golang.org/x/tools
 go 1.12
 
 require (
+	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/yuin/goldmark v1.2.1
 	golang.org/x/mod v0.3.0
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974
