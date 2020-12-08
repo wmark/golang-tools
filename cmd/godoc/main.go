@@ -197,10 +197,13 @@ func main() {
 	}
 
 	// Get the GOMOD value, use it to determine if godoc is being invoked in module mode.
-	goModFile, err := goMod()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to determine go env GOMOD value: %v", err)
-		goModFile = "" // Fall back to GOPATH mode.
+	var goModFile string
+	if currentDir, err := os.Getwd(); !strings.HasPrefix(currentDir, *goroot) {
+		goModFile, err = goMod()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to determine go env GOMOD value: %v", err)
+			goModFile = "" // Fall back to GOPATH mode.
+		}
 	}
 
 	if goModFile != "" {
