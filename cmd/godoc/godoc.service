@@ -1,0 +1,21 @@
+[Unit]
+Description=Golang's documentation server
+Requires=godoc.socket
+; ConditionUser=!root
+
+[Service]
+ExecStart=/usr/local/bin/godoc -http=:6060
+Environment=PATH=/opt/go/bin:/usr/bin:/bin
+WorkingDirectory=/opt/go
+DynamicUser=yes
+ProtectProc=noaccess
+NoNewPrivileges=yes
+RestrictNamespaces=yes
+SystemCallFilter=@system-service
+SystemCallFilter=~bind connect listen recv recvfrom recvmmsg recvmmsg_time64 recvmsg send sendmmsg sendmsg sendto setsockopt socket socketcall socketpair
+SystemCallFilter=~memfd_create unshare
+; SystemCallFilter=~execve execveat
+SystemCallErrorNumber=EPERM
+
+[Install]
+Also=godoc.socket
