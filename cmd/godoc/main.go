@@ -38,6 +38,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"golang.org/x/tools/godoc"
 	"golang.org/x/tools/godoc/analysis"
@@ -50,6 +51,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/coreos/go-systemd/v22/activation"
+	netutil "github.com/wmark/go.netutil"
 )
 
 const defaultAddr = "localhost:6060" // default webserver address
@@ -389,6 +391,16 @@ func main() {
 	if *verbose {
 		log.Println("starting HTTP server")
 	}
+
+	ctx, cancelFn := context.WithCancel(context.Background())
+	defer cancelFn()
+	server := &http.Server{
+		Handler:      handler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  2 * time.Minute,
+	}
+
 	var ln net.Listener
 	if _, socketActivated := os.LookupEnv("LISTEN_FDS"); socketActivated {
 		listeners, err := activation.Listeners()
@@ -396,6 +408,14 @@ func main() {
 			log.Fatalf("Socket activated, but without any listener. Err: %v", err)
 		}
 		ln = listeners[0]
+
+		lingerCtx := netutil.NewIdleTracker(ctx, 45*time.Minute)
+		go func() {
+			<-lingerCtx.Done()
+			tearDownCtx, _ := context.WithTimeout(ctx, 10*time.Second)
+			server.Shutdown(tearDownCtx)
+		}()
+		server.ConnState = lingerCtx.ConnState
 	} else {
 		listener, err := net.Listen("tcp", *httpAddr)
 		if err != nil {
@@ -403,7 +423,7 @@ func main() {
 		}
 		ln = listener
 	}
-	server := &http.Server{Handler: handler}
+
 	if err := server.Serve(ln); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("ListenAndServe %s: %v", *httpAddr, err)
 	}
