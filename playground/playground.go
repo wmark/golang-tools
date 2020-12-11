@@ -21,9 +21,12 @@ import (
 	"golang.org/x/tools/godoc/golangorgenv"
 )
 
-const baseURL = "https://play.golang.org"
+var baseURL = "https://play.golang.org"
 
 func init() {
+	if newBaseURL, ok := os.LookupEnv("PLAYGROUND_BACKEND_URL"); ok {
+		baseURL = newBaseURL
+	}
 	http.HandleFunc("/compile", bounce)
 	http.HandleFunc("/share", bounce)
 }
