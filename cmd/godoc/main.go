@@ -210,6 +210,9 @@ func main() {
 			goModFile = "" // Fall back to GOPATH mode.
 		}
 	}
+	if goModFile == "/dev/null" {
+		goModFile = ""
+	}
 
 	if goModFile != "" {
 		fmt.Printf("using module mode; GOMOD=%s\n", goModFile)
